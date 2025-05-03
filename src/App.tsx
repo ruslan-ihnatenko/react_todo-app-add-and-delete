@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable jsx-a11y/label-has-associated-control */
 /* eslint-disable jsx-a11y/control-has-associated-label */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { USER_ID } from './api/todos';
 import { Todo } from './types/Todo';
 import * as postService from './api/todos';
@@ -15,6 +16,9 @@ export const App: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [filter, setFilter] = useState<'active' | 'all' | 'completed'>('all');
   const [tempToDo, setTempToDo] = useState<Todo | null>(null);
+
+  // Ref for the input element
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const loadToDos = () => {
     setLoading(true);
@@ -77,21 +81,32 @@ export const App: React.FC = () => {
     }
   };
 
-  const deleteToDo = (todoId: number) => {
+  const deleteToDo = async (todoId: number) => {
     setErrorMessage('');
     setLoadingTodoId(todoId);
-    setToDos(currentTodos => currentTodos.filter(todo => todo.id !== todoId));
 
-    postService
-      .deleteTodo(todoId)
-      .catch(() => {
-        setErrorMessage('Unable to delete a todo');
-        loadToDos(); // Reload todos in case of failure
-      })
-      .finally(() => {
-        setLoadingTodoId(null);
-      });
+    try {
+      await postService.deleteTodo(todoId);
+      // Optimistically update the UI
+      setToDos(currentTodos => currentTodos.filter(todo => todo.id !== todoId));
+
+      // Send the delete request to the server
+      // Focus the input field after deletion
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
+    } catch (error) {
+      setErrorMessage('Unable to delete a todo');
+      loadToDos(); // Reload todos in case of failure
+    } finally {
+      setLoadingTodoId(null); // Clear the loading state
+    }
   };
+
+  const deleteCompletedToDos = async () =>
+    Promise.all(
+      todos.filter(todo => todo.completed).map(todo => deleteToDo(todo.id)),
+    );
 
   const updateTodo = async (todoId: number, updatedFields: Partial<Todo>) => {
     setLoadingTodoId(todoId); // Set the loading state for the todo being updated
@@ -148,7 +163,11 @@ export const App: React.FC = () => {
           />
 
           {/* Add a todo on form submit */}
-          <ToDoForm onSubmit={addToDo} onError={setErrorMessage} />
+          <ToDoForm
+            onSubmit={addToDo}
+            onError={setErrorMessage}
+            inputRef={inputRef}
+          />
         </header>
 
         <section className="todoapp__main" data-cy="TodoList">
@@ -267,11 +286,7 @@ export const App: React.FC = () => {
               type="button"
               className="todoapp__clear-completed"
               data-cy="ClearCompletedButton"
-              onClick={() =>
-                setToDos(currentTodos =>
-                  currentTodos.filter(todo => !todo.completed),
-                )
-              }
+              onClick={() => deleteCompletedToDos()}
               disabled={todos.every(todo => !todo.completed)}
             >
               Clear completed

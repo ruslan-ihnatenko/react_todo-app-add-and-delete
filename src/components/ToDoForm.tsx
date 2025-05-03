@@ -1,16 +1,16 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Todo } from '../types/Todo';
 import { USER_ID } from '../api/todos';
 
 type Props = {
   onSubmit: (todo: Todo) => Promise<void>;
   onError: (message: string) => void;
+  inputRef: React.RefObject<HTMLInputElement>;
 };
 
-export const ToDoForm: React.FC<Props> = ({ onSubmit, onError }) => {
+export const ToDoForm: React.FC<Props> = ({ onSubmit, onError, inputRef }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [title, setTitle] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null); // Create a ref for the input field
 
   const handleTitleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setTitle(event.target.value);
