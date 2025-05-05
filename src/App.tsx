@@ -1,12 +1,11 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable jsx-a11y/label-has-associated-control */
-/* eslint-disable jsx-a11y/control-has-associated-label */
 import React, { useEffect, useState, useRef } from 'react';
 import { USER_ID } from './api/todos';
 import { Todo } from './types/Todo';
 import * as postService from './api/todos';
 import classNames from 'classnames';
-import { ToDoForm } from './components/ToDoForm';
+import { Filter } from './types/Filter';
+import { Header } from './components/Header';
 
 export const App: React.FC = () => {
   // #region loadToDOs
@@ -14,10 +13,9 @@ export const App: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [loadingTodoId, setLoadingTodoId] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
-  const [filter, setFilter] = useState<'active' | 'all' | 'completed'>('all');
+  const [filter, setFilter] = useState<Filter>(Filter.All);
   const [tempToDo, setTempToDo] = useState<Todo | null>(null);
 
-  // Ref for the input element
   const inputRef = useRef<HTMLInputElement>(null);
 
   const loadToDos = () => {
@@ -35,19 +33,21 @@ export const App: React.FC = () => {
 
     if (errorMessage) {
       const timer = setTimeout(() => {
-        setErrorMessage(''); // Clear the error message after 3 seconds
+        setErrorMessage('');
       }, 3000);
 
-      return () => clearTimeout(timer); // Cleanup the timer if the component unmounts or errorMessage changes
+      return () => clearTimeout(timer);
     }
-  }, [USER_ID, errorMessage]);
+
+    return;
+  }, [errorMessage]);
 
   const filteredToDos = todos.filter(todo => {
-    if (filter === 'active') {
+    if (filter === Filter.Active) {
       return !todo.completed;
     }
 
-    if (filter === 'completed') {
+    if (filter === Filter.Completed) {
       return todo.completed;
     }
 
@@ -72,8 +72,8 @@ export const App: React.FC = () => {
         userId: newTodo.userId,
       });
 
-      setToDos(currentTodos => [...currentTodos, createdTodo]); // Add the created todo to the list
-      setTempToDo(null); // Clear the temporary todo
+      setToDos(currentTodos => [...currentTodos, createdTodo]);
+      setTempToDo(null);
     } catch (error) {
       setErrorMessage('Unable to add a todo');
       setTempToDo(null);
@@ -87,19 +87,17 @@ export const App: React.FC = () => {
 
     try {
       await postService.deleteTodo(todoId);
-      // Optimistically update the UI
+
       setToDos(currentTodos => currentTodos.filter(todo => todo.id !== todoId));
 
-      // Send the delete request to the server
-      // Focus the input field after deletion
       if (inputRef.current) {
         inputRef.current.focus();
       }
     } catch (error) {
       setErrorMessage('Unable to delete a todo');
-      loadToDos(); // Reload todos in case of failure
+      loadToDos();
     } finally {
-      setLoadingTodoId(null); // Clear the loading state
+      setLoadingTodoId(null);
     }
   };
 
@@ -109,9 +107,8 @@ export const App: React.FC = () => {
     );
 
   const updateTodo = async (todoId: number, updatedFields: Partial<Todo>) => {
-    setLoadingTodoId(todoId); // Set the loading state for the todo being updated
+    setLoadingTodoId(todoId);
 
-    // Optimistically update the UI
     try {
       const todoToUpdate = todos.find(todo => todo.id === todoId);
 
@@ -121,21 +118,19 @@ export const App: React.FC = () => {
         return;
       }
 
-      // Send the update request to the server
       const updatedTodo = await postService.updateTodo({
         ...todoToUpdate,
         ...updatedFields,
       });
 
-      // Update the todos state only after the server responds
       setToDos(currentTodos =>
         currentTodos.map(todo => (todo.id === todoId ? updatedTodo : todo)),
       );
     } catch {
       setErrorMessage('Unable to update todo status');
-      loadToDos(); // Reload todos in case of failure
+      loadToDos();
     } finally {
-      setLoadingTodoId(null); // Clear the loading state
+      setLoadingTodoId(null);
     }
   };
 
@@ -152,23 +147,12 @@ export const App: React.FC = () => {
       <h1 className="todoapp__title">todos</h1>
 
       <div className="todoapp__content">
-        <header className="todoapp__header">
-          {/* this button should have `active` class only if all todos are completed */}
-          <button
-            type="button"
-            className={classNames('todoapp__toggle-all', {
-              active: todos.length > 0 && todos.every(todo => todo.completed),
-            })}
-            data-cy="ToggleAllButton"
-          />
-
-          {/* Add a todo on form submit */}
-          <ToDoForm
-            onSubmit={addToDo}
-            onError={setErrorMessage}
-            inputRef={inputRef}
-          />
-        </header>
+        <Header
+          addToDo={addToDo}
+          setErrorMessage={setErrorMessage}
+          inputRef={inputRef}
+          todos={todos}
+        />
 
         <section className="todoapp__main" data-cy="TodoList">
           {/* Render regular todos */}
@@ -178,8 +162,12 @@ export const App: React.FC = () => {
               data-cy="Todo"
               className={classNames('todo', { completed: todo.completed })}
             >
-              <label className="todo__status-label">
+              <label
+                className="todo__status-label"
+                htmlFor={`todo-status-${todo.id}`}
+              >
                 <input
+                  id={`todo-status-${todo.id}`}
                   data-cy="TodoStatus"
                   type="checkbox"
                   className="todo__status"
@@ -251,10 +239,10 @@ export const App: React.FC = () => {
               <a
                 href="#/"
                 className={classNames('filter__link', {
-                  selected: filter === 'all',
+                  selected: filter === Filter.All,
                 })}
                 data-cy="FilterLinkAll"
-                onClick={() => setFilter('all')}
+                onClick={() => setFilter(Filter.All)}
               >
                 All
               </a>
@@ -262,10 +250,10 @@ export const App: React.FC = () => {
               <a
                 href="#/active"
                 className={classNames('filter__link', {
-                  selected: filter === 'active',
+                  selected: filter === Filter.Active,
                 })}
                 data-cy="FilterLinkActive"
-                onClick={() => setFilter('active')}
+                onClick={() => setFilter(Filter.Active)}
               >
                 Active
               </a>
@@ -273,10 +261,10 @@ export const App: React.FC = () => {
               <a
                 href="#/completed"
                 className={classNames('filter__link', {
-                  selected: filter === 'completed',
+                  selected: filter === Filter.Completed,
                 })}
                 data-cy="FilterLinkCompleted"
-                onClick={() => setFilter('completed')}
+                onClick={() => setFilter(Filter.Completed)}
               >
                 Completed
               </a>
