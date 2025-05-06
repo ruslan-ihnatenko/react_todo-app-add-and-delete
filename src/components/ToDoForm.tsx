@@ -54,7 +54,7 @@ export const ToDoForm: React.FC<Props> = ({ onSubmit, onError, inputRef }) => {
     if (!isSubmitting && inputRef.current) {
       inputRef.current.focus();
     }
-  }, [isSubmitting]);
+  }, [inputRef, isSubmitting]);
 
   return (
     <form onSubmit={handleSubmit}>

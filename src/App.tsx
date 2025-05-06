@@ -6,11 +6,13 @@ import * as postService from './api/todos';
 import classNames from 'classnames';
 import { Filter } from './types/Filter';
 import { Header } from './components/Header';
+import { TempToDo } from './components/TempToDo';
+import { Footer } from './components/Footer';
 
 export const App: React.FC = () => {
   // #region loadToDOs
   const [todos, setToDos] = useState<Todo[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [, setLoading] = useState<boolean>(false);
   const [loadingTodoId, setLoadingTodoId] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [filter, setFilter] = useState<Filter>(Filter.All);
@@ -155,7 +157,6 @@ export const App: React.FC = () => {
         />
 
         <section className="todoapp__main" data-cy="TodoList">
-          {/* Render regular todos */}
           {filteredToDos.map(todo => (
             <div
               key={todo.id}
@@ -203,84 +204,15 @@ export const App: React.FC = () => {
             </div>
           ))}
 
-          {/* Show tempTodo with a loader */}
-          {tempToDo && (
-            <div data-cy="Todo" className="todo">
-              <label className="todo__status-label">
-                <input
-                  data-cy="TodoStatus"
-                  type="checkbox"
-                  className="todo__status"
-                  checked={tempToDo.completed}
-                  disabled
-                />
-              </label>
-
-              <span data-cy="TodoTitle" className="todo__title">
-                {tempToDo.title}
-              </span>
-
-              <div data-cy="TodoLoader" className="modal overlay is-active">
-                <div className="modal-background has-background-white-ter" />
-                <div className="loader" />
-              </div>
-            </div>
-          )}
+          <TempToDo tempToDo={tempToDo} />
         </section>
 
-        {/* Hide the footer if there are no todos */}
-        {todos.length > 0 && (
-          <footer className="todoapp__footer" data-cy="Footer">
-            <span className="todo-count" data-cy="TodosCounter">
-              {`${todos.filter(todo => !todo.completed).length} items left`}
-            </span>
-
-            <nav className="filter" data-cy="Filter">
-              <a
-                href="#/"
-                className={classNames('filter__link', {
-                  selected: filter === Filter.All,
-                })}
-                data-cy="FilterLinkAll"
-                onClick={() => setFilter(Filter.All)}
-              >
-                All
-              </a>
-
-              <a
-                href="#/active"
-                className={classNames('filter__link', {
-                  selected: filter === Filter.Active,
-                })}
-                data-cy="FilterLinkActive"
-                onClick={() => setFilter(Filter.Active)}
-              >
-                Active
-              </a>
-
-              <a
-                href="#/completed"
-                className={classNames('filter__link', {
-                  selected: filter === Filter.Completed,
-                })}
-                data-cy="FilterLinkCompleted"
-                onClick={() => setFilter(Filter.Completed)}
-              >
-                Completed
-              </a>
-            </nav>
-
-            <button
-              type="button"
-              className="todoapp__clear-completed"
-              data-cy="ClearCompletedButton"
-              onClick={() => deleteCompletedToDos()}
-              disabled={todos.every(todo => !todo.completed)}
-            >
-              Clear completed
-            </button>
-          </footer>
-        )}
+        <Footer
+          todos={todos}
+          setFilter={setFilter}
+          deleteCompletedToDos={deleteCompletedToDos}
+          filter={filter}
+        />
       </div>
 
       {/* Error notification */}
